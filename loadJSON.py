@@ -1,3 +1,4 @@
+#Function to load Courses from JSON to object list. Returns list
 def loadCourses():
     #Importing dependencies
     from modelclass import (Class, Catalog)

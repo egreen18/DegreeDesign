@@ -3,17 +3,18 @@ from bs4 import BeautifulSoup
 from modelclass import (Class,Catalog)
 import re
 import json
+from copy import copy
 
 #Creating RegEx patterns for processing of scraped data
-code_find = re.compile(r"([A-Z]*).*(\d{3})")
-credit_find = re.compile(r"Credits*:|CEUs*:\s(\d|Var\[.*\])")
+# code_find = re.compile(r"([A-Z]*).*(\d{3})")
+credit_find = re.compile(r"(?:Credits*:|CEUs*:)\s(\d|Var\[.*\])")
+code_find = re.compile(r"\xa0")
 course_find = re.compile(r"\(.*\)")
 url_find = re.compile(r'href="(.*)"')
 
 #Defining important URLs
 urlCSU = 'https://catalog.colostate.edu'
 urlBase = 'https://catalog.colostate.edu/general-catalog/courses-az/'
-url = 'https://catalog.colostate.edu/general-catalog/courses-az/math/'
 
 #Function which generates a catalog filled with class objects for a given course URL
 def get_catalog(url,program):
@@ -22,12 +23,14 @@ def get_catalog(url,program):
     classes = soup.find_all('p',class_="courseblocktitle")
     catalog = Catalog()
     for i in classes:
-        if not code_find.match(i.string):
-            break
-        code = code_find.split(i.string)[1]+code_find.split(i.string)[2]
+        # if not code_find.match(i.string):
+        #     print('Missing credits for class in '+program)
+        #     break
+        code = code_find.split(i.string)[0]+code_find.split(i.string)[1]
         parent = i.parent.find_all('p',class_="courseblockdesc")[0].contents
         setattr(catalog,code,Class())
         setattr(getattr(catalog,code),'program',program)
+        setattr(getattr(catalog,code),'title',code_find.split(i.string)[3])
         setattr(getattr(catalog,code),'credits',credit_find.split(i.string)[1])
         setattr(getattr(catalog,code),'description',parent[2].string)
         dex = 6
@@ -62,13 +65,17 @@ for kdx,k in enumerate(courses):
             Courses.append(catalog)
             
 #Cleaning up empty courses
-while [] in Courses:
-    Courses.remove([])
+dex = 0
+while dex in range(len(Courses)):
+    while Courses[dex].names() == []:
+        del Courses[dex]
+    dex += 1
 
-#Translating objects into dictionaries for JSON conversion
-dictCourses = Courses.copy()
+# Translating objects into dictionaries for JSON conversion
+dictCourses = copy(Courses)
 for idx,i in enumerate(dictCourses):
-    for j in list(i.__dict__.keys()):
+    dictCourses[idx] = copy(Courses[idx])
+    for j in i.names():
         setattr(dictCourses[idx],j,getattr(dictCourses[idx],j).__dict__)
     dictCourses[idx] = dictCourses[idx].__dict__
  
