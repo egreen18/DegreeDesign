@@ -4,15 +4,18 @@ from modelclass import (Class,Catalog)
 import re
 import json
 
+#Creating RegEx patterns for processing of scraped data
 code_find = re.compile(r"([A-Z]*).*(\d{3})")
 credit_find = re.compile(r"Credits*:|CEUs*:\s(\d|Var\[.*\])")
 course_find = re.compile(r"\(.*\)")
 url_find = re.compile(r'href="(.*)"')
 
+#Defining important URLs
 urlCSU = 'https://catalog.colostate.edu'
 urlBase = 'https://catalog.colostate.edu/general-catalog/courses-az/'
 url = 'https://catalog.colostate.edu/general-catalog/courses-az/math/'
 
+#Function which generates a catalog filled with class objects for a given course URL
 def get_catalog(url,program):
     response = requests.get(url)
     soup = BeautifulSoup(response.text, "html.parser")
@@ -43,10 +46,13 @@ def get_catalog(url,program):
                     termTrack = 1
     return catalog
 
+#Grabbing all courses and initializing list storage
 responseBase = requests.get(urlBase)
 soupBase = BeautifulSoup(responseBase.text, "html.parser")
 courses = soupBase.find_all('li')
 Courses = []
+
+#Running get_catalog on every course and saving in the list
 for kdx,k in enumerate(courses):
     if k.string:
         if course_find.search(k.string):
@@ -54,16 +60,20 @@ for kdx,k in enumerate(courses):
             print(url)
             catalog = get_catalog(url,course_find.split(courses[kdx].string)[0])
             Courses.append(catalog)
+            
+#Cleaning up empty courses
 while [] in Courses:
     Courses.remove([])
-    
+
+#Translating objects into dictionaries for JSON conversion
 dictCourses = Courses.copy()
 for idx,i in enumerate(dictCourses):
     for j in list(i.__dict__.keys()):
         setattr(dictCourses[idx],j,getattr(dictCourses[idx],j).__dict__)
     dictCourses[idx] = dictCourses[idx].__dict__
-    
-with open('courseData',"w") as outfile:
+ 
+#Dumping data as JSON for variable storage    
+with open('courseData.json',"w") as outfile:
     def obj_dict(obj):
         return obj.__dict__
     json.dump(dictCourses,outfile)
