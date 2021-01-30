@@ -1,0 +1,1 @@
+class Class(object):    def __init__(self):        self.code = ''        self.title = ''        self.credits = 0        self.description = ''        self.prereqs = []        self.terms = []
