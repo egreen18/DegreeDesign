@@ -1,2 +1,0 @@
-class Semester(object):
-    pass

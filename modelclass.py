@@ -1,1 +1,1 @@
-class Class(object):    def __init__(self):        self.code = ''        self.title = ''        self.credits = 0        self.description = ''        self.prereqs = []        self.terms = []
+class Class(object):    def __init__(self):        self.program = ''        self.title = ''        self.credits = 0        self.description = ''        self.prereqs = []        self.terms = []        class Catalog(object):    def names(self):        print(list(self.__dict__.keys()))class Semester(object):    passclass Degree(object):    pass
