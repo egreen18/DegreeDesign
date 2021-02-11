@@ -1,7 +1,7 @@
 #Function to load Courses from JSON to object list. Returns list
 def loadCourses():
     #Importing dependencies
-    from modelclass import (Class, Catalog)
+    from modelclass import (Class, Catalog, College)
     import json
     
     #Loading JSON file to dictionary
@@ -9,10 +9,13 @@ def loadCourses():
         courseData = json.load(f)
     
     #Transforming dictionary into object list using Class.load method
-    Courses = []
+    # Courses = []
+    CSU = College()
     for idx,i in enumerate(courseData):
         catalog = Catalog()
-        for j in list(i.keys()):
-            setattr(catalog,j,Class().load(i[j]))
-        Courses.append(catalog)
-    return Courses
+        setattr(CSU,i,catalog)
+        for j in courseData[i]:
+            classTemp = Class()
+            classTemp.load(courseData[i][j])
+            setattr(catalog,j,classTemp)
+    return CSU

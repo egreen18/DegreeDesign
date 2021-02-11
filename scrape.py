@@ -1,16 +1,18 @@
 import requests
 from bs4 import BeautifulSoup
-from modelclass import (Class,Catalog)
+from modelclass import (Class,Catalog,College)
+from unicodedata import normalize
 import re
 import json
-from copy import copy
 
 #Creating RegEx patterns for processing of scraped data
-# code_find = re.compile(r"([A-Z]*).*(\d{3})")
+# code_find = re.compile(r"([A-Z]*).*(\d{3})"
 credit_find = re.compile(r"(?:Credits*:|CEUs*:)\s(\d|Var\[.*\])")
+code_match = re.compile(r"\D{1,5}.\d{1,5}")
 code_find = re.compile(r"\xa0")
 course_find = re.compile(r"\(.*\)")
 url_find = re.compile(r'href="(.*)"')
+letter_find = re.compile(r"(\D*)")
 
 #Defining important URLs
 urlCSU = 'https://catalog.colostate.edu'
@@ -23,9 +25,6 @@ def get_catalog(url,program):
     classes = soup.find_all('p',class_="courseblocktitle")
     catalog = Catalog()
     for i in classes:
-        # if not code_find.match(i.string):
-        #     print('Missing credits for class in '+program)
-        #     break
         code = code_find.split(i.string)[0]+code_find.split(i.string)[1]
         parent = i.parent.find_all('p',class_="courseblockdesc")[0].contents
         setattr(catalog,code,Class())
@@ -33,12 +32,12 @@ def get_catalog(url,program):
         setattr(getattr(catalog,code),'title',code_find.split(i.string)[3])
         setattr(getattr(catalog,code),'credits',credit_find.split(i.string)[1])
         setattr(getattr(catalog,code),'description',parent[2].string)
-        dex = 6
-        while parent[dex].string:
-            if code_find.match(parent[dex].string):
-                match = code_find.match(parent[dex].string)
-                getattr(getattr(catalog,code),'prereqs').append(match[1]+match[2])
-            dex += 1
+        for j in parent:
+            if not j.string:
+                pass
+            elif code_match.match(j.string):
+                getattr(getattr(catalog,code),'prereqs').append(
+                    normalize('NFKD',j.string).replace(' ',''))
         termTrack = 0
         for j in parent:
             if termTrack:
@@ -53,7 +52,7 @@ def get_catalog(url,program):
 responseBase = requests.get(urlBase)
 soupBase = BeautifulSoup(responseBase.text, "html.parser")
 courses = soupBase.find_all('li')
-Courses = []
+CSU  = College()
 
 #Running get_catalog on every course and saving in the list
 for kdx,k in enumerate(courses):
@@ -62,25 +61,19 @@ for kdx,k in enumerate(courses):
             url = urlCSU+url_find.split(str(k))[1]
             print(url)
             catalog = get_catalog(url,course_find.split(courses[kdx].string)[0])
-            Courses.append(catalog)
+            if catalog.names():
+                setattr(CSU,letter_find.split(catalog.names()[0])[1],catalog)
             
-#Cleaning up empty courses
-dex = 0
-while dex in range(len(Courses)):
-    while Courses[dex].names() == []:
-        del Courses[dex]
-    dex += 1
 
 # Translating objects into dictionaries for JSON conversion
-dictCourses = copy(Courses)
-for idx,i in enumerate(dictCourses):
-    dictCourses[idx] = copy(Courses[idx])
-    for j in i.names():
-        setattr(dictCourses[idx],j,getattr(dictCourses[idx],j).__dict__)
-    dictCourses[idx] = dictCourses[idx].__dict__
+dictCSU = CSU.__dict__
+for i in dictCSU.keys():
+    dictCSU[i] = dictCSU[i].__dict__
+    for j in dictCSU[i].keys():
+        dictCSU[i][j] = dictCSU[i][j].__dict__
  
 #Dumping data as JSON for variable storage    
 with open('courseData.json',"w") as outfile:
     def obj_dict(obj):
         return obj.__dict__
-    json.dump(dictCourses,outfile)
+    json.dump(dictCSU,outfile)
